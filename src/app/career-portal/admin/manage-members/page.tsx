@@ -1,8 +1,10 @@
 "use client";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { supabase } from "@/api/supabase";
 import type { User, Session } from "@supabase/supabase-js";
+import { Plus, X, ArrowLeft, Search } from "lucide-react";
 
 interface Member {
   id: string;
@@ -35,6 +37,9 @@ export default function ManageMembersPage() {
   const [editLastName, setEditLastName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editWalletAddress, setEditWalletAddress] = useState("");
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Check for existing session and authorization
   useEffect(() => {
@@ -400,16 +405,47 @@ export default function ManageMembersPage() {
               </p>
             </div>
             <div className="flex gap-2">
-              <button
+              <Link
+                href="/career-portal/admin"
+                className="group flex items-center gap-1.5 px-3 py-2 text-muted hover:text-white text-sm transition-all duration-200 rounded-lg hover:bg-white/5"
+              >
+                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform duration-200" />
+                <span>Back</span>
+              </Link>
+              <motion.button
                 onClick={() => setShowAddForm(!showAddForm)}
-                className="px-4 py-2 rounded-lg text-white text-sm transition-opacity hover:opacity-95"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="group relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-medium overflow-hidden transition-all duration-300"
                 style={{
-                  backgroundImage: "linear-gradient(117.96deg, #6f58da, #5131e7)",
-                  boxShadow: "0 4px 12px rgba(111, 88, 218, 0.35)",
+                  background: showAddForm 
+                    ? "linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))"
+                    : "linear-gradient(135deg, #7c3aed 0%, #6d28d9 50%, #5b21b6 100%)",
+                  boxShadow: showAddForm
+                    ? "0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)"
+                    : "0 4px 20px rgba(124, 58, 237, 0.4), 0 0 0 1px rgba(124, 58, 237, 0.2)",
                 }}
               >
-                {showAddForm ? "Cancel" : "Add Member"}
-              </button>
+                <span 
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)",
+                  }}
+                />
+                <span className="relative z-10 flex items-center gap-2">
+                  {showAddForm ? (
+                    <>
+                      <X className="w-4 h-4" />
+                      Cancel
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />
+                      Add Member
+                    </>
+                  )}
+                </span>
+              </motion.button>
               <button
                 onClick={handleSignOut}
                 className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors text-sm"
@@ -622,20 +658,19 @@ export default function ManageMembersPage() {
             transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
             className="bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl p-6 accent-glow"
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <h2 className="text-xl font-semibold text-white">
                 Members ({members.length})
               </h2>
-              <div className="flex gap-2">
-                <button 
-                  onClick={fetchMembers}
-                  className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors text-sm"
-                >
-                  Refresh
-                </button>
-                <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors text-sm">
-                  Export CSV
-                </button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                <input
+                  type="text"
+                  placeholder="Search by name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full sm:w-64 pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-muted focus:outline-none focus:border-electric focus:ring-1 focus:ring-electric transition-colors text-sm"
+                />
               </div>
             </div>
 
@@ -652,14 +687,20 @@ export default function ManageMembersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {members.length === 0 ? (
+                  {members.filter(member => {
+                    const fullName = `${member.first_name} ${member.last_name}`.toLowerCase();
+                    return fullName.includes(searchQuery.toLowerCase());
+                  }).length === 0 ? (
                     <tr>
                       <td colSpan={6} className="text-center py-8 text-muted">
-                        No members found.
+                        {searchQuery ? "No members found matching your search." : "No members found."}
                       </td>
                     </tr>
                   ) : (
-                    members.map((member) => (
+                    members.filter(member => {
+                      const fullName = `${member.first_name} ${member.last_name}`.toLowerCase();
+                      return fullName.includes(searchQuery.toLowerCase());
+                    }).map((member) => (
                       <tr key={member.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                         <td className="py-4 px-4">
                           <div className="text-white font-medium">
