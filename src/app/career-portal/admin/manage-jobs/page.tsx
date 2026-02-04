@@ -2,7 +2,7 @@
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { supabase } from "@/api/supabase";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 import { Plus, ArrowLeft, Search, ArrowUpDown } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import type { Job, CareerField } from "@/types/career";
@@ -45,11 +45,11 @@ export default function ManageJobsPage() {
     const getSession = async () => {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await supabaseBrowser.auth.getSession();
 
       // Authorization check for existing sessions
       if (session?.user && session.user.email !== "blockchn@uw.edu") {
-        await supabase.auth.signOut();
+        await supabaseBrowser.auth.signOut();
         setError("Access denied. Unauthorized email address.");
         return;
       }
@@ -63,14 +63,14 @@ export default function ManageJobsPage() {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabaseBrowser.auth.onAuthStateChange(async (event, session) => {
       // Authorization check for auth state changes
       if (
         event === "SIGNED_IN" &&
         session?.user &&
         session.user.email !== "blockchn@uw.edu"
       ) {
-        await supabase.auth.signOut();
+        await supabaseBrowser.auth.signOut();
         setError("Access denied. Unauthorized email address.");
         return;
       }
@@ -124,6 +124,9 @@ export default function ManageJobsPage() {
     e.preventDefault();
     setFormError(null);
     setFormLoading(true);
+
+    console.log('Creating job with data:', formData);
+    console.log('Referral available value:', formData.referral_available, 'Type:', typeof formData.referral_available);
 
     try {
       const response = await fetch("/api/jobs", {
@@ -245,7 +248,7 @@ export default function ManageJobsPage() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabaseBrowser.auth.signInWithPassword({
         email,
         password,
       });
@@ -254,7 +257,7 @@ export default function ManageJobsPage() {
         setError(error.message);
       } else if (data.user && data.user.email !== "blockchn@uw.edu") {
         // Sign out immediately if not authorized email
-        await supabase.auth.signOut();
+        await supabaseBrowser.auth.signOut();
         setError("Access denied. Unauthorized email address.");
       } else {
         // Successful sign in with authorized email
@@ -270,7 +273,7 @@ export default function ManageJobsPage() {
 
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
+      await supabaseBrowser.auth.signOut();
     } catch (err) {
       console.error("Error signing out:", err);
     }
@@ -505,7 +508,10 @@ export default function ManageJobsPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-              onClick={() => setShowCreateModal(false)}
+              onClick={() => {
+                setShowCreateModal(false);
+                resetForm();
+              }}
             >
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -520,7 +526,10 @@ export default function ManageJobsPage() {
                     Create Job Posting
                   </h2>
                   <button
-                    onClick={() => setShowCreateModal(false)}
+                    onClick={() => {
+                      setShowCreateModal(false);
+                      resetForm();
+                    }}
                     className="text-muted hover:text-white transition-colors"
                   >
                     <svg
@@ -706,7 +715,11 @@ export default function ManageJobsPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setShowCreateModal(false)}
+                      onClick={() => {
+                        setShowCreateModal(false);
+                        resetForm();
+                        setFormError(null);
+                      }}
                       className="px-6 py-3 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors"
                     >
                       Cancel
@@ -724,7 +737,11 @@ export default function ManageJobsPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-              onClick={() => setEditingJob(null)}
+              onClick={() => {
+              setEditingJob(null);
+              resetForm();
+              setFormError(null);
+            }}
             >
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -739,7 +756,11 @@ export default function ManageJobsPage() {
                     Edit Job Posting
                   </h2>
                   <button
-                    onClick={() => setEditingJob(null)}
+                    onClick={() => {
+              setEditingJob(null);
+              resetForm();
+              setFormError(null);
+            }}
                     className="text-muted hover:text-white transition-colors"
                   >
                     <svg
@@ -873,23 +894,23 @@ export default function ManageJobsPage() {
                      </div>
                    </div>
 
-                   <div className="flex items-center gap-2">
-                     <input
-                       type="checkbox"
-                       id="edit_referral_available"
-                       checked={formData.referral_available}
-                       onChange={(e) =>
-                         setFormData({ ...formData, referral_available: e.target.checked })
-                       }
-                       className="w-4 h-4 bg-white/5 border border-white/10 rounded focus:ring-electric focus:border-electric"
-                     />
-                     <label
-                       htmlFor="edit_referral_available"
-                       className="text-sm font-medium text-white cursor-pointer"
-                     >
-                       Referral Available
-                     </label>
-                   </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="edit_referral_available"
+                        checked={formData.referral_available}
+                        onChange={(e) => {
+                          setFormData({ ...formData, referral_available: e.target.checked });
+                        }}
+                        className="w-4 h-4 bg-white/5 border border-white/10 rounded focus:ring-electric focus:border-electric"
+                      />
+                      <label
+                        htmlFor="edit_referral_available"
+                        className="text-sm font-medium text-white cursor-pointer"
+                      >
+                        Referral Available
+                      </label>
+                    </div>
 
                    <div>
                      <label
@@ -925,7 +946,11 @@ export default function ManageJobsPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setEditingJob(null)}
+                      onClick={() => {
+              setEditingJob(null);
+              resetForm();
+              setFormError(null);
+            }}
                       className="px-6 py-3 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors"
                     >
                       Cancel
@@ -1022,6 +1047,11 @@ export default function ManageJobsPage() {
                             {job.experience_level && (
                               <span className="ml-4 px-2 py-1 bg-white/10 rounded text-xs text-muted">
                                 {job.experience_level}
+                              </span>
+                            )}
+                            {job.referral_available && (
+                              <span className="ml-2 px-2 py-1 bg-green-500/20 border border-green-500/30 rounded text-xs text-green-400 font-medium">
+                                Referral Available
                               </span>
                             )}
                             {job.career_fields && job.career_fields.length > 0 && (
